@@ -164,6 +164,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     uploadCard.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', (e) => {
+        // DEBUG: Proof of life
+        alert('系统提示: 检测到文件选择! 准备开始上传...');
         if (e.target.files.length > 0) {
             handleFileUpload(e.target.files[0]);
         }
@@ -172,12 +174,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     function handleFileUpload(file) {
         // Visual feedback
         const uploadCardTitle = uploadCard.querySelector('.card-title');
-        const originalText = "上传书籍"; // Reset to default just in case
+        const originalText = "上传书籍";
+
+        // 0. Pre-check: Size limit (Bmob free tier often limits to 10MB or 20MB)
+        const contentSize = file.size / 1024 / 1024; // in MB
+        if (contentSize > 20) {
+            alert('上传失败: 文件过大。Bmob 免费版限制 20MB 以内，当前文件: ' + contentSize.toFixed(2) + 'MB');
+            return;
+        }
+
         uploadCardTitle.textContent = '1/3 上传文件中...';
         uploadCard.style.pointerEvents = 'none';
 
         // 1. Upload File to Bmob
-        const bmobFile = Bmob.File(file.name, file);
+        // Sanitize filename to avoid backend errors
+        const safeName = file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_');
+        const bmobFile = Bmob.File(safeName, file);
         bmobFile.save().then(res => {
             uploadCardTitle.textContent = '2/3 保存信息...';
             // res is array [ { filename, group, url } ]
@@ -459,6 +471,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     const blogFeed = document.getElementById('blog-feed');
     const titleInput = document.getElementById('post-title-input');
     const contentInput = document.getElementById('post-content-input');
+    const blogImageInput = document.getElementById('blog-image-input');
+    const btnInsertImg = document.getElementById('btn-insert-img');
+    const btnInsertTable = document.getElementById('btn-insert-table');
+
+    // Toolbar Logic
+    btnInsertTable.addEventListener('click', () => {
+        const tableTemplate = `\n| 表头1 | 表头2 |\n| --- | --- |\n| 内容1 | 内容2 |\n`;
+        const start = contentInput.selectionStart;
+        const end = contentInput.selectionEnd;
+        const text = contentInput.value;
+        contentInput.value = text.substring(0, start) + tableTemplate + text.substring(end);
+    });
+
+    btnInsertImg.addEventListener('click', () => {
+        blogImageInput.click();
+    });
+
+    blogImageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            const file = e.target.files[0];
+            const originalText = btnInsertImg.textContent;
+            btnInsertImg.textContent = '上传中...';
+            btnInsertImg.disabled = true;
+
+            const safeName = "blog_" + Date.now() + "_" + file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_');
+            const bmobFile = Bmob.File(safeName, file);
+
+            bmobFile.save().then(res => {
+                const url = res[0].url;
+                const imgMarkdown = `\n![图片描述](${url})\n`;
+
+                const start = contentInput.selectionStart;
+                const end = contentInput.selectionEnd;
+                const text = contentInput.value;
+                contentInput.value = text.substring(0, start) + imgMarkdown + text.substring(end);
+
+                btnInsertImg.textContent = originalText;
+                btnInsertImg.disabled = false;
+            }).catch(err => {
+                alert('图片上传失败: ' + (err.message || JSON.stringify(err)));
+                btnInsertImg.textContent = originalText;
+                btnInsertImg.disabled = false;
+            });
+        }
+    });
 
     // State for editing
     let editingPostId = null;
@@ -587,7 +644,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="delete-btn-corner" id="delete-post-btn">删除</button>
                     </div>
                 </div>
-                <div class="article-content">${post.content.replace(/\n/g, '<br>')}</div>
+                <div class="article-content markdown-body">${marked.parse(post.content)}</div>
             </article>
         `;
 

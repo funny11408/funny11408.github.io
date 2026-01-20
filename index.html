@@ -66,15 +66,29 @@
                     <button id="new-post-btn" class="btn-primary">写博文</button>
                 </div>
 
-                <!-- Editor (Hidden by default) -->
+                <!-- Blog Editor (Hidden by default) -->
                 <div id="blog-editor" class="blog-editor hidden">
-                    <input type="text" id="post-title-input" placeholder="输入标题...">
-                    <textarea id="post-content-input" placeholder="写下您的感悟..."></textarea>
+                    <h2>写博文 (Markdown Support)</h2>
+                    <input type="text" id="post-title-input" placeholder="文章标题" class="editor-input">
+
+                    <!-- Editor Toolbar -->
+                    <div class="editor-toolbar" style="margin-bottom: 5px;">
+                        <button id="btn-insert-img" class="btn-secondary" style="font-size: 0.8rem;">📷 插入图片</button>
+                        <button id="btn-insert-table" class="btn-secondary" style="font-size: 0.8rem;">📅 插入表格</button>
+                        <span style="font-size:0.8rem;color:#666;margin-left:10px;">支持 Markdown 格式</span>
+                    </div>
+
+                    <textarea id="post-content-input" placeholder="写点什么... (支持 Markdown)"
+                        class="editor-textarea"></textarea>
+
                     <div class="editor-actions">
-                        <button id="cancel-post-btn" class="btn-secondary">取消</button>
                         <button id="save-post-btn" class="btn-primary">发布</button>
+                        <button id="cancel-post-btn" class="btn-secondary">取消</button>
                     </div>
                 </div>
+
+                <!-- Hidden Image Input for Blog -->
+                <input type="file" id="blog-image-input" accept="image/*" hidden>
 
                 <div id="blog-feed" class="blog-feed">
                     <!-- Posts go here -->
@@ -117,7 +131,7 @@
 
     </main>
 
-    <script src="app.js?v=20260120_4"></script>
+    <script src="app.js?v=20260120_6"></script>
 </body>
 
 </html>
