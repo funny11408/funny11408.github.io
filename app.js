@@ -499,8 +499,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         } catch (error) {
             console.error('Bmob save error:', error);
-            // Enhanced error reporting
-            alert('发布失败: ' + (error.message ? error.message : JSON.stringify(error)));
+            // Debugging the weird 'undefined' error
+            let errorMsg = 'Unknown Error';
+            try {
+                if (typeof error === 'undefined') errorMsg = 'undefined (literally)';
+                else if (error === null) errorMsg = 'null';
+                else if (typeof error === 'string') errorMsg = error;
+                else if (error.message) errorMsg = error.message;
+                else errorMsg = JSON.stringify(error);
+            } catch (e) {
+                errorMsg = 'Error parsing error: ' + e.message;
+            }
+            alert('发布失败 (Debug Info):\n' + errorMsg + '\n\n类型: ' + typeof error);
         } finally {
             savePostBtn.textContent = '发布';
             savePostBtn.disabled = false;
