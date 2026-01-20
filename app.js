@@ -24,12 +24,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     */
 
-    // --- 预置书籍列表 (存放在 books 文件夹中) ---
+    // --- 预置书籍列表 (与 app.js 同目录) ---
     const PRESET_BOOKS = [
-        { fileName: '数据结构与算法1.0.pdf', title: '数据结构与算法', path: 'books/数据结构与算法1.0.pdf' },
-        { fileName: '机器学习1.1.0.pdf', title: '机器学习', path: 'books/机器学习1.1.0.pdf' },
-        { fileName: '深度学习1.2.0.pdf', title: '深度学习', path: 'books/深度学习1.2.0.pdf' },
-        { fileName: '白话机器学习算法.pdf', title: '白话机器学习算法', path: 'books/白话机器学习算法 ([新加坡] 黄莉婷,苏川集,武传海(译)) (Z-Library).pdf' }
+        { fileName: '数据结构与算法1.0.pdf', title: '数据结构与算法', path: '数据结构与算法1.0.pdf' },
+        { fileName: '机器学习1.1.0.pdf', title: '机器学习', path: '机器学习1.1.0.pdf' },
+        { fileName: '深度学习1.2.0.pdf', title: '深度学习', path: '深度学习1.2.0.pdf' },
+        { fileName: '白话机器学习算法.pdf', title: '白话机器学习算法', path: '白话机器学习算法 ([新加坡] 黄莉婷,苏川集,武传海(译)) (Z-Library).pdf' }
     ];
 
 
