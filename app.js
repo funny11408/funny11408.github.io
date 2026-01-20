@@ -571,11 +571,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Replace placeholder with actual markdown
             contentInput.value = contentInput.value.replace(placeholder, imgMarkdown);
 
+            clearInterval(timerId); // Stop timer
             btnInsertImg.textContent = originalText;
             btnInsertImg.disabled = false;
         }).catch(err => {
+            clearInterval(timerId); // Stop timer
             console.error('Upload failed:', err);
-            alert('上传失败: ' + (err.message || JSON.stringify(err)));
+
+            let msg = err.message || JSON.stringify(err);
+            if (msg.includes('60秒')) {
+                msg += '\n\n【排查建议】\n1. 您的网络可能连接 Bmob 文件服务器已断开。\n2. 请尝试连接手机热点。\n3. 您也可以点击“再试一次”。';
+            }
+            alert('上传失败: ' + msg);
+
             // Remove placeholder on failure
             contentInput.value = contentInput.value.replace(placeholder, '');
             btnInsertImg.textContent = originalText;
