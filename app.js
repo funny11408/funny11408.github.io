@@ -506,9 +506,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         contentInput.setSelectionRange(newCursorPos, newCursorPos);
 
         const safeName = "blog_" + Date.now() + "_" + (file.name ? file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_') : 'pasted_image.png');
+        console.log('Starting upload for:', safeName);
         const bmobFile = Bmob.File(safeName, file);
 
         bmobFile.save().then(res => {
+            console.log('Upload success:', res);
             const url = res[0].url;
             const imgMarkdown = `![图片描述](${url})`;
 
@@ -542,18 +544,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 e.preventDefault(); // Prevent default paste behavior for files
             }
         }
-    });
-
-    // State for editing
-    let editingPostId = null;
-
-    newPostBtn.addEventListener('click', () => {
-        editingPostId = null; // Clear edit mode
-        titleInput.value = '';
-        contentInput.value = '';
-        blogFeed.classList.add('hidden');
-        blogEditor.classList.remove('hidden');
-        titleInput.focus();
     });
 
     cancelPostBtn.addEventListener('click', () => {
