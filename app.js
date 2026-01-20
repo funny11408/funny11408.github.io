@@ -536,7 +536,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             blogFeed.appendChild(listContainer);
         }).catch(err => {
             console.error(err);
-            blogFeed.innerHTML = '<div style="color:red;text-align:center;">加载失败，请检查网络或密钥配置</div>';
+            // Display actual error for debugging
+            blogFeed.innerHTML = `<div style="color:red;text-align:center;padding:1rem;">
+                <h3>加载失败 (Load Failed)</h3>
+                <p>错误代码 (Code): ${err.code || 'Unknown'}</p>
+                <p>错误信息 (Msg): ${err.message || JSON.stringify(err)}</p>
+                <p style="font-size:0.8rem;color:#666;">请检查 Bmob 后台的 "应用设置" -> "安全配置" -> "Web安全域名"，确保已添加您的域名 (如 github.io)。</p>
+            </div>`;
         });
     }
 
