@@ -208,7 +208,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         }).catch(err => {
             console.error('Upload failed', err);
-            alert('上传失败: ' + (err.message || JSON.stringify(err)));
+            // Enhanced error reporting
+            alert('上传失败: ' + (err.message ? err.message : JSON.stringify(err)));
             uploadCardTitle.textContent = originalText;
             uploadCard.style.pointerEvents = 'auto';
         });
@@ -498,7 +499,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         } catch (error) {
             console.error('Bmob save error:', error);
-            alert('发布失败: ' + error.message);
+            // Enhanced error reporting
+            alert('发布失败: ' + (error.message ? error.message : JSON.stringify(error)));
         } finally {
             savePostBtn.textContent = '发布';
             savePostBtn.disabled = false;
