@@ -579,6 +579,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // State for editing
+    let editingPostId = null;
+
+    newPostBtn.addEventListener('click', () => {
+        editingPostId = null; // Clear edit mode
+        titleInput.value = '';
+        contentInput.value = '';
+        blogFeed.classList.add('hidden');
+        blogEditor.classList.remove('hidden');
+        titleInput.focus();
+    });
+
     cancelPostBtn.addEventListener('click', () => {
         blogEditor.classList.add('hidden');
         blogFeed.classList.remove('hidden');
