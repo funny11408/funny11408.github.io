@@ -381,8 +381,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!localData) {
                         // 从服务器下载到本地缓存
                         console.log('Downloading preset book:', book.path);
-                        const response = await fetch(book.path);
-                        if (!response.ok) throw new Error('文件加载失败');
+                        // 对中文文件名进行 URL 编码
+                        const encodedPath = encodeURIComponent(book.path);
+                        const response = await fetch(encodedPath);
+                        if (!response.ok) throw new Error('文件加载失败: ' + response.status);
                         const arrayBuffer = await response.arrayBuffer();
 
                         localData = {
