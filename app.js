@@ -118,9 +118,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Initialize DB then render
+    // Initialize DB
     await ReaderDB.init();
-    renderLibrary();
 
     // --- State & Navigation ---
     const views = {
@@ -169,7 +168,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bookGrid = document.getElementById('book-grid');
     const uploadCard = document.getElementById('upload-card');
     const fileInput = document.getElementById('file-input');
-    // Sample book card removed (auto-loaded)
+
+    // 初始加载书架
+    renderLibrary();
 
     uploadCard.addEventListener('click', () => fileInput.click());
 
@@ -373,28 +374,50 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 点击打开预置书籍
             card.addEventListener('click', async () => {
-                card.style.opacity = '0.5';
+                const cardTitle = card.querySelector('.card-title');
+                const originalTitle = cardTitle.textContent;
+
+                card.style.opacity = '0.7';
+                card.style.pointerEvents = 'none';
+
                 try {
                     // 先检查本地缓存
                     let localData = await ReaderDB.getFile(book.fileName);
 
                     if (!localData) {
                         // 从服务器下载到本地缓存
+                        cardTitle.textContent = '下载中...';
                         console.log('Downloading preset book:', book.path);
-                        const response = await fetch(book.path);
-                        if (!response.ok) throw new Error('文件加载失败: ' + response.status);
-                        const arrayBuffer = await response.arrayBuffer();
 
-                        localData = {
-                            fileName: book.fileName,
-                            title: book.title,
-                            type: 'application/pdf',
-                            content: arrayBuffer,
-                            lastRead: Date.now(),
-                            progress: 0,
-                            isPreset: true
-                        };
-                        await ReaderDB.saveFile(localData);
+                        // 添加超时处理 (2分钟)
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+                        try {
+                            const response = await fetch(book.path, { signal: controller.signal });
+                            clearTimeout(timeoutId);
+
+                            if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                            cardTitle.textContent = '处理中...';
+                            const arrayBuffer = await response.arrayBuffer();
+
+                            localData = {
+                                fileName: book.fileName,
+                                title: book.title,
+                                type: 'application/pdf',
+                                content: arrayBuffer,
+                                lastRead: Date.now(),
+                                progress: 0,
+                                isPreset: true
+                            };
+                            await ReaderDB.saveFile(localData);
+                        } catch (fetchErr) {
+                            if (fetchErr.name === 'AbortError') {
+                                throw new Error('下载超时，请检查网络后重试');
+                            }
+                            throw fetchErr;
+                        }
                     }
 
                     // 加载 PDF
@@ -402,8 +425,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (err) {
                     console.error(err);
                     alert('打开书籍失败: ' + err.message);
+                    cardTitle.textContent = originalTitle;
                 } finally {
                     card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
                 }
             });
 
