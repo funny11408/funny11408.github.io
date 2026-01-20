@@ -540,14 +540,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // 3. Create Timeout Promise (reduced to 10s for testing)
+        // 3. Create Timeout Promise (60 seconds)
         const timeoutTask = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("上传超时 (10秒)")), 10000)
+            setTimeout(() => reject(new Error("上传超时 (60秒)，网络可能较慢")), 60000)
         );
 
         // 4. Race
         Promise.race([uploadTask, timeoutTask]).then(res => {
-            // alert('Step 3: 收到响应!'); 
+            // alert('Step 3: 收到响应!');
             // Result is array [{ filename, group, url }]
             if (!res || !res[0] || !res[0].url) {
                 throw new Error("返回数据格式异常: " + JSON.stringify(res));
