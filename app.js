@@ -166,14 +166,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     function handleFileUpload(file) {
         // Visual feedback
         const uploadCardTitle = uploadCard.querySelector('.card-title');
-        const originalText = uploadCardTitle.textContent;
-        uploadCardTitle.textContent = '上传中...';
+        const originalText = "上传书籍"; // Reset to default just in case
+        uploadCardTitle.textContent = '1/3 上传文件中...';
         uploadCard.style.pointerEvents = 'none';
 
         // 1. Upload File to Bmob
         const bmobFile = Bmob.File(file.name, file);
         bmobFile.save().then(res => {
-            const fileUrl = res[0].url; // Usually res is array [ { filename, group, url } ] or object depending on SDK version
+            uploadCardTitle.textContent = '2/3 保存信息...';
+            // res is array [ { filename, group, url } ]
+            const fileUrl = res[0].url;
             console.log('File uploaded:', fileUrl);
 
             // 2. Save Metadata to Bmob 'Books' table
@@ -187,6 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             return query.save();
         }).then(bookObj => {
+            uploadCardTitle.textContent = '3/3 本地缓存...';
             // 3. Cache content locally for immediate access (Optimization)
             const fileReader = new FileReader();
             fileReader.onload = async (e) => {
@@ -204,13 +207,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 uploadCardTitle.textContent = originalText;
                 uploadCard.style.pointerEvents = 'auto';
                 renderLibrary(); // Reload list
+                alert('上传成功！');
             };
             fileReader.readAsArrayBuffer(file);
 
         }).catch(err => {
             console.error('Upload failed', err);
             // Enhanced error reporting
-            alert('上传失败: ' + (err.message ? err.message : JSON.stringify(err)));
+            let errMsg = err.message ? err.message : JSON.stringify(err);
+            if (errMsg.includes('101')) errMsg += ' (请确认 Posts 和 Books 表已创建)';
+            alert('上传失败: ' + errMsg);
+
             uploadCardTitle.textContent = originalText;
             uploadCard.style.pointerEvents = 'auto';
         });
