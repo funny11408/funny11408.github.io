@@ -534,8 +534,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeName = "blog_" + Date.now() + "_" + (file.name ? file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_') : 'pasted.png');
         console.log('Preparing upload:', safeName, 'Size:', file.size);
 
-        // DEBUG: Step-by-step
-        // alert('Step 1: 准备上传 ' + safeName);
+        // Visual Timer
+        let seconds = 0;
+        let timerId = setInterval(() => {
+            seconds++;
+            btnInsertImg.textContent = `上传中 (${seconds}s)...`;
+            if (seconds >= 60) clearInterval(timerId);
+        }, 1000);
 
         let uploadTask;
         try {
