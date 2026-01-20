@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Bmob Init ---
     // Initialize Bmob with Secret Key and API Safe Code
     // Error 10007 indicates the first argument must be the Secret Key, not App ID.
-    Bmob.initialize("5c4b10e2fd2661f6", "3ea4900440a592446fc4e0ba1434f7e2");
+    Bmob.initialize("5c4b10e2fd2661f6", "");
 
     // --- Default Data (Books Only - Deprecated/Fallback) ---
     // The previous DEFAULT_DATA logic is largely superseded by Bmob Cloud, 
