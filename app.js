@@ -484,13 +484,64 @@ document.addEventListener('DOMContentLoaded', async () => {
         contentInput.value = text.substring(0, start) + tableTemplate + text.substring(end);
     });
 
-    newPostBtn.addEventListener('click', () => {
-        editingPostId = null; // Clear edit mode
-        titleInput.value = '';
-        contentInput.value = '';
-        blogFeed.classList.add('hidden');
-        blogEditor.classList.remove('hidden');
-        titleInput.focus();
+    btnInsertImg.addEventListener('click', () => {
+        blogImageInput.click();
+    });
+
+    // Helper for uploading images (used by Button & Paste)
+    function uploadAndInsertImage(file) {
+        const originalText = btnInsertImg.textContent;
+        btnInsertImg.textContent = '上传中...';
+        btnInsertImg.disabled = true;
+
+        // Insert placeholder
+        const placeholder = `![上传中...](loading)`;
+        const start = contentInput.selectionStart;
+        const end = contentInput.selectionEnd;
+        const text = contentInput.value;
+        contentInput.value = text.substring(0, start) + placeholder + text.substring(end);
+
+        // Move cursor after placeholder
+        const newCursorPos = start + placeholder.length;
+        contentInput.setSelectionRange(newCursorPos, newCursorPos);
+
+        const safeName = "blog_" + Date.now() + "_" + (file.name ? file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_') : 'pasted_image.png');
+        const bmobFile = Bmob.File(safeName, file);
+
+        bmobFile.save().then(res => {
+            const url = res[0].url;
+            const imgMarkdown = `![图片描述](${url})`;
+
+            // Replace placeholder with actual markdown
+            contentInput.value = contentInput.value.replace(placeholder, imgMarkdown);
+
+            btnInsertImg.textContent = originalText;
+            btnInsertImg.disabled = false;
+        }).catch(err => {
+            alert('图片上传失败: ' + (err.message || JSON.stringify(err)));
+            contentInput.value = contentInput.value.replace(placeholder, ''); // Remove placeholder
+            btnInsertImg.textContent = originalText;
+            btnInsertImg.disabled = false;
+        });
+    }
+
+    blogImageInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            uploadAndInsertImage(e.target.files[0]);
+        }
+    });
+
+    // Paste Support (Ctrl+V)
+    contentInput.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let index in items) {
+            const item = items[index];
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const blob = item.getAsFile();
+                uploadAndInsertImage(blob);
+                e.preventDefault(); // Prevent default paste behavior for files
+            }
+        }
     });
 
     cancelPostBtn.addEventListener('click', () => {
@@ -593,6 +644,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    function parseMarkdownSafe(content) {
+        if (!content) return '';
+        try {
+            if (typeof marked === 'undefined') {
+                return content.replace(/\n/g, '<br>'); // Fallback if library missing
+            }
+            return marked.parse(content);
+        } catch (e) {
+            console.error('Markdown parse error:', e);
+            return '<div style="color:red">渲染错误: ' + e.message + '</div>' + content.replace(/\n/g, '<br>');
+        }
+    }
+
     function renderBlogPost(post) {
         blogFeed.className = 'blog-feed-detail';
         blogFeed.innerHTML = `
@@ -608,7 +672,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <button class="delete-btn-corner" id="delete-post-btn">删除</button>
                     </div>
                 </div>
-                <div class="article-content markdown-body">${marked.parse(post.content)}</div>
+                <div class="article-content markdown-body">${parseMarkdownSafe(post.content)}</div>
             </article>
         `;
 
