@@ -628,7 +628,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="post-summary-title">${post.title}</div>
                     <div class="post-summary-date">${post.date || post.createdAt}</div>
                 `;
-                el.addEventListener('click', () => renderBlogPost(post));
+                el.addEventListener('click', () => {
+                    alert('调试: 点击了文章: ' + post.title);
+                    renderBlogPost(post);
+                });
                 listContainer.appendChild(el);
             });
             blogFeed.appendChild(listContainer);
@@ -645,16 +648,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function parseMarkdownSafe(content) {
+        // TEMPORARY DEBUG: Force text-only mode to rule out Markdown issues
         if (!content) return '';
-        try {
-            if (typeof marked === 'undefined') {
-                return content.replace(/\n/g, '<br>'); // Fallback if library missing
-            }
-            return marked.parse(content);
-        } catch (e) {
-            console.error('Markdown parse error:', e);
-            return '<div style="color:red">渲染错误: ' + e.message + '</div>' + content.replace(/\n/g, '<br>');
-        }
+        return content.replace(/\n/g, '<br>');
     }
 
     function renderBlogPost(post) {
