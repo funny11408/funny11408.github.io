@@ -1,32 +1,12 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // --- Default Data ---
-    const DEFAULT_DATA = {
-        books: [
-            {
-                title: "示例文章: 荷塘月色",
-                fileName: 'sample.txt',
-                type: 'text/plain',
-                content: new TextEncoder().encode(`开始
-第1章 荷塘月色
-这几天心里颇不宁静。今晚在院子里坐着乘凉，忽然想起日日走过的荷塘，在这满月的光里，总该另有一番样子吧。月亮渐渐地升高了，墙外马路上孩子们的欢笑，已经听不见了；妻在屋里拍着润儿，迷迷糊糊地哼着眠歌。我悄悄地披了大衫，带上门出去。
+    // --- Bmob Init ---
+    // Initialize Bmob with Application ID and REST API Key
+    Bmob.initialize("8286b8f9012aed97ea64e055192e2219", "3ea4900440a592446fc4e0ba1434f7e2");
 
-沿着荷塘，是一条曲折的小煤屑路。这是一条幽僻的路；白天也少人走，夜晚更加寂寞。荷塘四面，长着许多树，蓊蓊郁郁的。路的一旁，是些杨柳，和一些不知道名字的树。没有月光的晚上，这路上阴森森的，有些怕人。今晚却很好，虽然月光也还是淡淡的。
-
-路上只我一个人，背着手踱着。这一片天地好像是我的；我也像超出了平常的自己，到了另一世界里。我爱热闹，也爱冷静；爱群居，也爱独处。像今晚上，一个人在这苍茫的月下，什么都可以想，什么都可以不想，便觉是个自由的人。白天里一定要做的事，一定要说的话，现在都可不理。这是独处的妙处，我且受用这无边的荷塘月色好了。
-
-曲曲折折的荷塘上面，望去田田的叶子。叶子出水很高，像亭亭的舞女的裙。层层的叶子中间，零星地点缀着些白花，有袅娜地开着的，有羞涩地打着朵儿的；正如一粒粒的明珠，又如碧天里的星星，又如刚出浴的美人。微风过处，送来缕缕清香，仿佛远处高楼上渺茫的歌声似的。这时候叶子与花也有一丝的颤动，像闪电般，霎时传过荷塘的那边去了。叶子本是肩并肩密密地挨着，这便宛然有了一道凝碧的波痕。叶子底下是脉脉的流水，遮住了，不能见一些颜色；而叶子却更见风致了。`).buffer,
-                lastRead: Date.now()
-            }
-        ],
-        posts: [
-            {
-                id: 'welcome-post',
-                title: '欢迎使用悦读 (Minimalist Reader)',
-                content: '欢迎来到您的私人阅读空间。\n\n这里没有繁杂的干扰，只有纯粹的文字。您可以点击"书城"页面的"+"号导入您的 TXT 或 PDF 书籍。\n\n所有的书籍都存储在您的浏览器本地数据库中，不会上传到云端，保护您的隐私。\n\n祝您阅读愉快！',
-                date: new Date().toLocaleDateString()
-            }
-        ]
-    };
+    // --- Default Data (Books Only - Deprecated/Fallback) ---
+    // The previous DEFAULT_DATA logic is largely superseded by Bmob Cloud, 
+    // but we can keep the structure if we need manual defaults later.
+    // For now, removing the auto-load logic to rely on Cloud entirely.
 
     // --- IndexedDB Helper ---
     const ReaderDB = {
@@ -129,14 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize DB then render
     await ReaderDB.init();
-    initBlogDefaults();
     renderLibrary();
-
-    function initBlogDefaults() {
-        if (!localStorage.getItem('reader_blog_posts')) {
-            localStorage.setItem('reader_blog_posts', JSON.stringify(DEFAULT_DATA.posts));
-        }
-    }
 
     // --- State & Navigation ---
     const views = {
@@ -190,33 +163,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     uploadCard.addEventListener('click', () => fileInput.click());
 
     function handleFileUpload(file) {
-        const fileReader = new FileReader();
-        fileReader.onload = async (e) => {
-            const arrayBuffer = e.target.result;
+        // Visual feedback
+        const uploadCardTitle = uploadCard.querySelector('.card-title');
+        const originalText = uploadCardTitle.textContent;
+        uploadCardTitle.textContent = '上传中...';
+        uploadCard.style.pointerEvents = 'none';
 
-            // Prepare data for DB
-            const fileData = {
-                fileName: file.name,
-                title: file.name.replace(/\.(txt|pdf)$/i, ''),
-                type: file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'text/plain'),
-                content: arrayBuffer, // Save raw buffer
-                lastRead: Date.now()
-            };
+        // 1. Upload File to Bmob
+        const bmobFile = Bmob.File(file.name, file);
+        bmobFile.save().then(res => {
+            const fileUrl = res[0].url; // Usually res is array [ { filename, group, url } ] or object depending on SDK version
+            console.log('File uploaded:', fileUrl);
 
-            try {
+            // 2. Save Metadata to Bmob 'Books' table
+            const query = Bmob.Query('Books');
+            query.set("title", file.name.replace(/\.(txt|pdf)$/i, ''));
+            query.set("fileName", file.name);
+            query.set("fileUrl", fileUrl); // Important: Cloud URL
+            query.set("type", file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'text/plain'));
+            query.set("lastRead", Date.now());
+            query.set("progress", 0);
+
+            return query.save();
+        }).then(bookObj => {
+            // 3. Cache content locally for immediate access (Optimization)
+            const fileReader = new FileReader();
+            fileReader.onload = async (e) => {
+                const arrayBuffer = e.target.result;
+                const fileData = {
+                    fileName: file.name, // Local Key
+                    title: bookObj.title,
+                    type: bookObj.type,
+                    content: arrayBuffer,
+                    lastRead: Date.now(),
+                    cloudId: bookObj.objectId // Link to Cloud
+                };
                 await ReaderDB.saveFile(fileData);
-                if (file.name.endsWith('.pdf')) {
-                    loadPdfBook(fileData);
-                } else {
-                    const text = decodeText(arrayBuffer);
-                    loadBook({ ...fileData, content: text });
-                }
-            } catch (error) {
-                console.error('Save failed', error);
-                alert('保存文件失败，可能是存储空间不足。');
-            }
-        };
-        fileReader.readAsArrayBuffer(file);
+
+                uploadCardTitle.textContent = originalText;
+                uploadCard.style.pointerEvents = 'auto';
+                renderLibrary(); // Reload list
+            };
+            fileReader.readAsArrayBuffer(file);
+
+        }).catch(err => {
+            console.error('Upload failed', err);
+            alert('上传失败: ' + (err.message || JSON.stringify(err)));
+            uploadCardTitle.textContent = originalText;
+            uploadCard.style.pointerEvents = 'auto';
+        });
     }
 
     function decodeText(arrayBuffer) {
@@ -346,48 +341,98 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    async function renderLibrary() {
+    function renderLibrary() {
         const dynamicCards = document.querySelectorAll('.book-card.dynamic-book');
         dynamicCards.forEach(c => c.remove());
 
-        const library = await ReaderDB.getAllFiles();
-        // Sort by lastRead desc
-        library.sort((a, b) => (b.lastRead || 0) - (a.lastRead || 0));
+        // Fetch from Cloud
+        const query = Bmob.Query("Books");
+        query.order("-lastRead");
+        query.find().then(books => {
 
-        library.forEach(book => {
-            const card = document.createElement('div');
-            card.className = 'book-card dynamic-book';
-            card.innerHTML = `
-                <div class="delete-book-btn" title="删除">×</div>
-                <div class="book-cover" style="background-color: #f7f5f0; color: #8c8270; font-size: 2rem;">
-                    ${book.title.substring(0, 1)}
-                </div>
-                <div class="card-title">${book.title}</div>
-                <div class="card-meta">已保存 (IndexedDB)</div>
-            `;
+            books.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card dynamic-book';
+                card.innerHTML = `
+                    <div class="delete-book-btn" title="删除">×</div>
+                    <div class="book-cover" style="background-color: #f7f5f0; color: #8c8270; font-size: 2rem;">
+                        ${book.title.substring(0, 1)}
+                    </div>
+                    <div class="card-title">${book.title}</div>
+                    <div class="card-meta">Cloud Sync</div>
+                `;
 
-            // Open Book
-            card.addEventListener('click', (e) => {
-                if (e.target.classList.contains('delete-book-btn')) return;
+                // Open Book (Hybrid Check)
+                card.addEventListener('click', async (e) => {
+                    if (e.target.classList.contains('delete-book-btn')) return;
 
-                if (book.fileName.endsWith('.pdf')) {
-                    loadPdfBook(book);
-                } else {
-                    const text = decodeText(book.content);
-                    loadBook({ ...book, content: text });
-                }
+                    card.style.opacity = '0.5'; // Visual feedback
+
+                    try {
+                        // 1. Check Local Cache
+                        let localData = await ReaderDB.getFile(book.fileName);
+
+                        if (!localData) {
+                            console.log('Local miss, downloading from cloud:', book.fileUrl);
+                            // 2. Download if missing
+                            // Note: Bmob file url might need https prefix if missing
+                            const response = await fetch(book.fileUrl);
+                            const arrayBuffer = await response.arrayBuffer();
+
+                            localData = {
+                                fileName: book.fileName,
+                                title: book.title,
+                                type: book.type,
+                                content: arrayBuffer,
+                                lastRead: Date.now(),
+                                progress: book.progress || 0,
+                                cloudId: book.objectId
+                            };
+                            await ReaderDB.saveFile(localData);
+                        } else {
+                            // Update local meta just in case
+                            localData.cloudId = book.objectId;
+                            localData.progress = book.progress || localData.progress; // Sync progress from cloud if larger? Or Trust cloud?
+                            // Let's trust cloud progress for now if we want sync functionality
+                        }
+
+                        // Load
+                        if (localData.fileName.endsWith('.pdf')) {
+                            loadPdfBook(localData);
+                        } else {
+                            const text = decodeText(localData.content);
+                            loadBook({ ...localData, content: text });
+                        }
+
+                    } catch (err) {
+                        alert('打开书籍失败: ' + err.message);
+                    } finally {
+                        card.style.opacity = '1';
+                    }
+                });
+
+                // Delete Book (Cloud + Local)
+                card.querySelector('.delete-book-btn').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`确定要从云端删除 "${book.title}" 吗？(本地缓存也会被清除)`)) {
+                        // Delete Remote
+                        const q = Bmob.Query('Books');
+                        q.destroy(book.objectId).then(async () => {
+                            // Delete Local
+                            await ReaderDB.deleteFile(book.fileName);
+                            renderLibrary();
+                        }).catch(err => {
+                            alert('删除失败:' + err.message);
+                        });
+                    }
+                });
+
+                bookGrid.appendChild(card);
             });
 
-            // Delete Book
-            card.querySelector('.delete-book-btn').addEventListener('click', async (e) => {
-                e.stopPropagation(); // Prevent card click
-                if (confirm(`确定要删除 "${book.title}" 吗？`)) {
-                    await ReaderDB.deleteFile(book.fileName);
-                    renderLibrary(); // Re-render
-                }
-            });
-
-            bookGrid.appendChild(card);
+        }).catch(err => {
+            console.error('Fetch books failed', err);
+            // Optionally render fallback local books here if offline
         });
     }
 
@@ -418,63 +463,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         editingPostId = null;
     });
 
-    savePostBtn.addEventListener('click', () => {
+    savePostBtn.addEventListener('click', async () => {
         const title = titleInput.value.trim();
         const content = contentInput.value.trim();
         if (!title || !content) return;
 
-        let posts = JSON.parse(localStorage.getItem('reader_blog_posts') || '[]');
+        // Visual feedback
+        savePostBtn.textContent = '发布中...';
+        savePostBtn.disabled = true;
 
-        if (editingPostId) {
-            // Update existing
-            const index = posts.findIndex(p => p.id === editingPostId);
-            if (index !== -1) {
-                posts[index].title = title;
-                posts[index].content = content;
-                // Optional: posts[index].date = new Date().toLocaleDateString(); // Update date?
+        try {
+            const query = Bmob.Query('Posts');
+
+            if (editingPostId) {
+                // Update existing
+                const post = await query.get(editingPostId);
+                post.set('title', title);
+                post.set('content', content);
+                await post.save();
+            } else {
+                // Create new
+                query.set("title", title);
+                query.set("content", content);
+                query.set("date", new Date().toLocaleDateString());
+                await query.save();
             }
-        } else {
-            // Create new
-            posts.unshift({ id: Date.now(), title, content, date: new Date().toLocaleDateString() });
+
+            titleInput.value = '';
+            contentInput.value = '';
+            editingPostId = null;
+            blogEditor.classList.add('hidden');
+            blogFeed.classList.remove('hidden');
+            renderBlogList(); // Reload from cloud
+
+        } catch (error) {
+            console.error('Bmob save error:', error);
+            alert('发布失败: ' + error.message);
+        } finally {
+            savePostBtn.textContent = '发布';
+            savePostBtn.disabled = false;
         }
-
-        localStorage.setItem('reader_blog_posts', JSON.stringify(posts));
-
-        titleInput.value = '';
-        contentInput.value = '';
-        editingPostId = null;
-        blogEditor.classList.add('hidden');
-        blogFeed.classList.remove('hidden');
-        // If we were editing, return to detail view? Or list? Let's go to list for simplicity.
-        renderBlogList();
     });
 
     function renderBlogList() {
         // Clear previous view
         blogFeed.className = 'blog-feed';
-        blogFeed.innerHTML = '';
+        blogFeed.innerHTML = '<div class="loading-indicator">加载文章中...</div>';
 
-        const posts = JSON.parse(localStorage.getItem('reader_blog_posts') || '[]');
+        const query = Bmob.Query("Posts");
+        query.order("-createdAt"); // Newest first
+        query.find().then(posts => {
+            blogFeed.innerHTML = ''; // Clear loading
 
-        if (posts.length === 0) {
-            blogFeed.innerHTML = '<div style="text-align:center;color:#999;margin-top:2rem;">暂无文章，点击右上角"写博文"开始创作</div>';
-            return;
-        }
+            if (posts.length === 0) {
+                blogFeed.innerHTML = '<div style="text-align:center;color:#999;margin-top:2rem;">暂无文章，点击右上角"写博文"开始创作 (Bmob Cloud)</div>';
+                return;
+            }
 
-        const listContainer = document.createElement('div');
-        listContainer.className = 'blog-list';
+            const listContainer = document.createElement('div');
+            listContainer.className = 'blog-list';
 
-        posts.forEach(post => {
-            const el = document.createElement('div');
-            el.className = 'post-item-summary';
-            el.innerHTML = `
-                <div class="post-summary-title">${post.title}</div>
-                <div class="post-summary-date">${post.date}</div>
-            `;
-            el.addEventListener('click', () => renderBlogPost(post));
-            listContainer.appendChild(el);
+            posts.forEach(post => {
+                const el = document.createElement('div');
+                el.className = 'post-item-summary';
+                el.innerHTML = `
+                    <div class="post-summary-title">${post.title}</div>
+                    <div class="post-summary-date">${post.date || post.createdAt}</div>
+                `;
+                el.addEventListener('click', () => renderBlogPost(post));
+                listContainer.appendChild(el);
+            });
+            blogFeed.appendChild(listContainer);
+        }).catch(err => {
+            console.error(err);
+            blogFeed.innerHTML = '<div style="color:red;text-align:center;">加载失败，请检查网络或密钥配置</div>';
         });
-        blogFeed.appendChild(listContainer);
     }
 
     function renderBlogPost(post) {
@@ -501,7 +564,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         document.getElementById('edit-post-btn').addEventListener('click', () => {
-            editingPostId = post.id;
+            editingPostId = post.objectId; // Bmob ID
             titleInput.value = post.title;
             contentInput.value = post.content;
             blogFeed.classList.add('hidden');
@@ -510,10 +573,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.getElementById('delete-post-btn').addEventListener('click', () => {
             if (confirm('确定删除?')) {
-                let posts = JSON.parse(localStorage.getItem('reader_blog_posts') || '[]');
-                posts = posts.filter(p => p.id !== post.id);
-                localStorage.setItem('reader_blog_posts', JSON.stringify(posts));
-                renderBlogList();
+                const query = Bmob.Query('Posts');
+                query.destroy(post.objectId).then(res => {
+                    renderBlogList();
+                }).catch(err => {
+                    alert('删除失败: ' + err.message);
+                });
             }
         });
     }
@@ -539,11 +604,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (fileData) {
                 fileData.progress = readerContent.scrollTop;
                 fileData.lastRead = Date.now();
+                if (fileData.cloudId) {
+                    const query = Bmob.Query('Books');
+                    const bookObj = await query.get(fileData.cloudId);
+                    bookObj.set('progress', readerContent.scrollTop);
+                    bookObj.set('lastRead', Date.now());
+                    await bookObj.save();
+                } else {
+                    // Try to find by fileName if cloudId missing (legacy compatibility)
+                    const q = Bmob.Query('Books');
+                    q.equalTo("fileName", "==", currentBookFileName);
+                    q.find().then(res => {
+                        if (res.length > 0) {
+                            const obj = res[0];
+                            obj.set('progress', readerContent.scrollTop);
+                            obj.set('lastRead', Date.now());
+                            obj.save();
+                        }
+                    });
+                }
+
+                // Always save locally too
                 await ReaderDB.saveFile(fileData);
 
                 // Visual feedback
                 const originalText = saveProgressBtn.textContent;
-                saveProgressBtn.textContent = "已保存!";
+                saveProgressBtn.textContent = "已保存(Cloud)!";
                 setTimeout(() => saveProgressBtn.textContent = originalText, 1500);
             }
         } catch (e) {
