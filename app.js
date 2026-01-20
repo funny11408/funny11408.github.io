@@ -484,42 +484,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         contentInput.value = text.substring(0, start) + tableTemplate + text.substring(end);
     });
 
-    btnInsertImg.addEventListener('click', () => {
-        blogImageInput.click();
-    });
-
-    blogImageInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const originalText = btnInsertImg.textContent;
-            btnInsertImg.textContent = '上传中...';
-            btnInsertImg.disabled = true;
-
-            const safeName = "blog_" + Date.now() + "_" + file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_');
-            const bmobFile = Bmob.File(safeName, file);
-
-            bmobFile.save().then(res => {
-                const url = res[0].url;
-                const imgMarkdown = `\n![图片描述](${url})\n`;
-
-                const start = contentInput.selectionStart;
-                const end = contentInput.selectionEnd;
-                const text = contentInput.value;
-                contentInput.value = text.substring(0, start) + imgMarkdown + text.substring(end);
-
-                btnInsertImg.textContent = originalText;
-                btnInsertImg.disabled = false;
-            }).catch(err => {
-                alert('图片上传失败: ' + (err.message || JSON.stringify(err)));
-                btnInsertImg.textContent = originalText;
-                btnInsertImg.disabled = false;
-            });
-        }
-    });
-
-    // State for editing
-    let editingPostId = null;
-
     newPostBtn.addEventListener('click', () => {
         editingPostId = null; // Clear edit mode
         titleInput.value = '';
