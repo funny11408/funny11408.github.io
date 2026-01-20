@@ -7,8 +7,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('App starting...');
 
     // --- Bmob Init ---
+    if (typeof Bmob === 'undefined') {
+        alert('严重错误: Bmob SDK 加载失败，请检查网络或刷新页面。');
+        return;
+    }
     // Initialize Bmob with Secret Key and API Safe Code
-    // Error 10007 indicates the first argument must be the Secret Key, not App ID.
     Bmob.initialize("5c4b10e2fd2661f6", "111111");
 
     // --- Default Data (Books Only - Deprecated/Fallback) ---
@@ -591,7 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     newPostBtn.addEventListener('click', () => {
         // debug
-        // alert('Click detected!');
+        alert('Click detected! 按钮已点击');
         editingPostId = null; // Clear edit mode
         titleInput.value = '';
         contentInput.value = '';

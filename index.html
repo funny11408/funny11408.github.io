@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script>
+        window.onerror = function (msg, url, line) {
+            alert("系统错误 (Global):\n" + msg + "\n行号: " + line);
+        };
+    </script>
     <link
         href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=Nunito:wght@300;400;600&display=swap"
         rel="stylesheet">
@@ -133,7 +138,7 @@
 
     </main>
 
-    <script src="app.js?v=20260120_16"></script>
+    <script src="app.js?v=20260120_24"></script>
 </body>
 
 </html>
