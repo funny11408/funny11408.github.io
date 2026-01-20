@@ -163,6 +163,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     uploadCard.addEventListener('click', () => fileInput.click());
 
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileUpload(e.target.files[0]);
+        }
+    });
+
     function handleFileUpload(file) {
         // Visual feedback
         const uploadCardTitle = uploadCard.querySelector('.card-title');
