@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // DEBUG: Global Error Handler
+    window.onerror = function (msg, url, line, col, error) {
+        alert("发生系统错误:\n" + msg + "\n行号: " + line);
+        return false;
+    };
+    console.log('App starting...');
+
     // --- Bmob Init ---
     // Initialize Bmob with Secret Key and API Safe Code
     // Error 10007 indicates the first argument must be the Secret Key, not App ID.
@@ -583,6 +590,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let editingPostId = null;
 
     newPostBtn.addEventListener('click', () => {
+        // debug
+        // alert('Click detected!');
         editingPostId = null; // Clear edit mode
         titleInput.value = '';
         contentInput.value = '';
