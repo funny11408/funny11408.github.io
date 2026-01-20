@@ -14,6 +14,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize Bmob with Secret Key and API Safe Code
     Bmob.initialize("5c4b10e2fd2661f6", "111111");
 
+    // DEBUG: Connectivity Test
+    // Try to fetch one item to verify keys and network
+    const testQuery = Bmob.Query('Posts');
+    testQuery.limit(1).find().then(res => {
+        console.log('Bmob Connection: Success', res);
+        // alert('Bmob 连接测试成功! 数据库读写正常。'); // Optional: Uncomment if needed
+    }).catch(err => {
+        console.error('Bmob Connection Failed:', err);
+        let msg = err.message || JSON.stringify(err);
+        if (msg.includes('401')) msg += ' (密钥错误)';
+        alert('严重警告: Bmob 连接失败!\n原因: ' + msg + '\n\n这就解释了为什么无法上传图片：连最基础的数据库都连不上。请检查密钥!');
+    });
+
     // --- Default Data (Books Only - Deprecated/Fallback) ---
     // The previous DEFAULT_DATA logic is largely superseded by Bmob Cloud, 
     // but we can keep the structure if we need manual defaults later.
