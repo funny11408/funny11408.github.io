@@ -648,9 +648,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function parseMarkdownSafe(content) {
-        // TEMPORARY DEBUG: Force text-only mode to rule out Markdown issues
         if (!content) return '';
-        return content.replace(/\n/g, '<br>');
+        try {
+            if (typeof marked === 'undefined') {
+                return content.replace(/\n/g, '<br>'); // Fallback if library missing
+            }
+            return marked.parse(content);
+        } catch (e) {
+
+            return '<div style="color:red">渲染错误: ' + e.message + '</div>' + content.replace(/\n/g, '<br>');
+        }
     }
 
     function renderBlogPost(post) {
