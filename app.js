@@ -490,6 +490,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Helper for uploading images (used by Button & Paste)
     function uploadAndInsertImage(file) {
+        // 1. Size Check (Max 5MB for images)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('图片过大 (超过5MB)，请压缩后上传。');
+            return;
+        }
+
         const originalText = btnInsertImg.textContent;
         btnInsertImg.textContent = '上传中...';
         btnInsertImg.disabled = true;
@@ -505,12 +511,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newCursorPos = start + placeholder.length;
         contentInput.setSelectionRange(newCursorPos, newCursorPos);
 
-        const safeName = "blog_" + Date.now() + "_" + (file.name ? file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_') : 'pasted_image.png');
-        console.log('Starting upload for:', safeName);
-        const bmobFile = Bmob.File(safeName, file);
+        const safeName = "blog_" + Date.now() + "_" + (file.name ? file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_') : 'pasted.png');
+        console.log('Preparing upload:', safeName, 'Size:', file.size);
 
-        bmobFile.save().then(res => {
-            console.log('Upload success:', res);
+        // DEBUG: Step-by-step
+        // alert('Step 1: 准备上传 ' + safeName);
+
+        let uploadTask;
+        try {
+            const bmobFile = Bmob.File(safeName, file);
+            uploadTask = bmobFile.save();
+            // alert('Step 2: 请求已发送，等待响应...');
+        } catch (e) {
+            alert('Step 1.5: SDK 初始化失败: ' + e.message);
+            contentInput.value = contentInput.value.replace(placeholder, '');
+            btnInsertImg.disabled = false;
+            btnInsertImg.textContent = originalText;
+            return;
+        }
+
+        // 3. Create Timeout Promise (reduced to 10s for testing)
+        const timeoutTask = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("上传超时 (10秒)")), 10000)
+        );
+
+        // 4. Race
+        Promise.race([uploadTask, timeoutTask]).then(res => {
+            // alert('Step 3: 收到响应!'); 
+            // Result is array [{ filename, group, url }]
+            if (!res || !res[0] || !res[0].url) {
+                throw new Error("返回数据格式异常: " + JSON.stringify(res));
+            }
             const url = res[0].url;
             const imgMarkdown = `![图片描述](${url})`;
 
@@ -520,8 +551,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnInsertImg.textContent = originalText;
             btnInsertImg.disabled = false;
         }).catch(err => {
-            alert('图片上传失败: ' + (err.message || JSON.stringify(err)));
-            contentInput.value = contentInput.value.replace(placeholder, ''); // Remove placeholder
+            console.error('Upload failed:', err);
+            alert('上传失败: ' + (err.message || JSON.stringify(err)));
+            // Remove placeholder on failure
+            contentInput.value = contentInput.value.replace(placeholder, '');
             btnInsertImg.textContent = originalText;
             btnInsertImg.disabled = false;
         });
