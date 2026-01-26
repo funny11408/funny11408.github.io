@@ -282,12 +282,19 @@ body {
     width: 100%;
     height: 150px;
     padding: 0.5rem;
-    border: none;
+    border: 2px dashed var(--border-color);
+    border-radius: 4px;
     outline: none;
     resize: none;
     font-family: var(--font-serif);
     background: transparent;
     font-size: 1rem;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+#post-content-input:focus {
+    border-color: var(--accent-color);
+    border-style: solid;
 }
 
 /* Blog List & Detail Styles (Updated) */

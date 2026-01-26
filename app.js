@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Paste Support (Ctrl+V)
+    // Paste Support (Ctrl+V) - 粘贴图片直接上传
     contentInput.addEventListener('paste', (e) => {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (let index in items) {
@@ -630,6 +630,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const blob = item.getAsFile();
                 uploadAndInsertImage(blob);
                 e.preventDefault(); // Prevent default paste behavior for files
+            }
+        }
+    });
+
+    // ===== 拖拽上传支持 (像 Word 一样) =====
+
+    // 阻止默认拖拽行为 (防止浏览器直接打开图片)
+    contentInput.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        contentInput.style.borderColor = '#4CAF50';
+        contentInput.style.backgroundColor = 'rgba(76, 175, 80, 0.05)';
+    });
+
+    contentInput.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        contentInput.style.borderColor = '';
+        contentInput.style.backgroundColor = '';
+    });
+
+    // 拖拽释放 - 上传图片
+    contentInput.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        contentInput.style.borderColor = '';
+        contentInput.style.backgroundColor = '';
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.type.startsWith('image/')) {
+                    uploadAndInsertImage(file);
+                } else {
+                    alert('只支持图片文件哦！');
+                }
             }
         }
     });
