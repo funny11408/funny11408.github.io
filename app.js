@@ -562,8 +562,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
-                // 计算压缩后的尺寸 (最大宽度 800px)
-                const maxWidth = 800;
+                // 计算压缩后的尺寸 (最大宽度 500px，适应 Bmob 限制)
+                const maxWidth = 500;
                 let width = img.width;
                 let height = img.height;
 
@@ -578,8 +578,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 绘制压缩后的图片
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // 转为 Base64 (JPEG 格式，质量 0.8)
-                const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                // 转为 Base64 (JPEG 格式，质量 0.5 适应 Bmob 300KB 限制)
+                const base64 = canvas.toDataURL('image/jpeg', 0.5);
 
                 // 生成 Markdown 图片语法
                 const imgMarkdown = `![图片](${base64})`;
