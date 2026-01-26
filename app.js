@@ -530,20 +530,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         blogImageInput.click();
     });
 
-    // Helper for uploading images (used by Button & Paste)
+    // Helper for inserting images (Base64 嵌入方式 - 无需网络)
     function uploadAndInsertImage(file) {
-        // 1. Size Check (Max 5MB for images)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('图片过大 (超过5MB)，请压缩后上传。');
+        // 1. Size Check (Max 10MB for images)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('图片过大 (超过10MB)，请压缩后上传。');
             return;
         }
 
         const originalText = btnInsertImg.textContent;
-        btnInsertImg.textContent = '上传中...';
+        btnInsertImg.textContent = '处理中...';
         btnInsertImg.disabled = true;
 
         // Insert placeholder
-        const placeholder = `![上传中...](loading)`;
+        const placeholder = `![处理中...](loading)`;
         const start = contentInput.selectionStart;
         const end = contentInput.selectionEnd;
         const text = contentInput.value;
@@ -553,66 +553,64 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newCursorPos = start + placeholder.length;
         contentInput.setSelectionRange(newCursorPos, newCursorPos);
 
-        const safeName = "blog_" + Date.now() + "_" + (file.name ? file.name.replace(/[^\w\.\-\u4e00-\u9fa5]/g, '_') : 'pasted.png');
-        console.log('Preparing upload:', safeName, 'Size:', file.size);
+        // 读取并压缩图片，转为 Base64
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                // 创建 canvas 进行压缩
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
 
-        // Visual Timer
-        let seconds = 0;
-        let timerId = setInterval(() => {
-            seconds++;
-            btnInsertImg.textContent = `上传中 (${seconds}s)...`;
-            if (seconds >= 60) clearInterval(timerId);
-        }, 1000);
+                // 计算压缩后的尺寸 (最大宽度 800px)
+                const maxWidth = 800;
+                let width = img.width;
+                let height = img.height;
 
-        let uploadTask;
-        try {
-            const bmobFile = Bmob.File(safeName, file);
-            uploadTask = bmobFile.save();
-            // alert('Step 2: 请求已发送，等待响应...');
-        } catch (e) {
-            alert('Step 1.5: SDK 初始化失败: ' + e.message);
-            contentInput.value = contentInput.value.replace(placeholder, '');
-            btnInsertImg.disabled = false;
-            btnInsertImg.textContent = originalText;
-            return;
-        }
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
 
-        // 3. Create Timeout Promise (60 seconds)
-        const timeoutTask = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("上传超时 (60秒)，网络可能较慢")), 60000)
-        );
+                canvas.width = width;
+                canvas.height = height;
 
-        // 4. Race
-        Promise.race([uploadTask, timeoutTask]).then(res => {
-            // alert('Step 3: 收到响应!');
-            // Result is array [{ filename, group, url }]
-            if (!res || !res[0] || !res[0].url) {
-                throw new Error("返回数据格式异常: " + JSON.stringify(res));
-            }
-            const url = res[0].url;
-            const imgMarkdown = `![图片描述](${url})`;
+                // 绘制压缩后的图片
+                ctx.drawImage(img, 0, 0, width, height);
 
-            // Replace placeholder with actual markdown
-            contentInput.value = contentInput.value.replace(placeholder, imgMarkdown);
+                // 转为 Base64 (JPEG 格式，质量 0.8)
+                const base64 = canvas.toDataURL('image/jpeg', 0.8);
 
-            clearInterval(timerId); // Stop timer
-            btnInsertImg.textContent = originalText;
-            btnInsertImg.disabled = false;
-        }).catch(err => {
-            clearInterval(timerId); // Stop timer
-            console.error('Upload failed:', err);
+                // 生成 Markdown 图片语法
+                const imgMarkdown = `![图片](${base64})`;
 
-            let msg = err.message || JSON.stringify(err);
-            if (msg.includes('60秒')) {
-                msg += '\n\n【排查建议】\n1. 您的网络可能连接 Bmob 文件服务器已断开。\n2. 请尝试连接手机热点。\n3. 您也可以点击“再试一次”。';
-            }
-            alert('上传失败: ' + msg);
+                // 替换占位符
+                contentInput.value = contentInput.value.replace(placeholder, imgMarkdown);
 
-            // Remove placeholder on failure
+                btnInsertImg.textContent = originalText;
+                btnInsertImg.disabled = false;
+
+                console.log('图片已嵌入，压缩后尺寸:', width, 'x', height);
+            };
+
+            img.onerror = function () {
+                alert('图片读取失败，请重试');
+                contentInput.value = contentInput.value.replace(placeholder, '');
+                btnInsertImg.textContent = originalText;
+                btnInsertImg.disabled = false;
+            };
+
+            img.src = e.target.result;
+        };
+
+        reader.onerror = function () {
+            alert('文件读取失败');
             contentInput.value = contentInput.value.replace(placeholder, '');
             btnInsertImg.textContent = originalText;
             btnInsertImg.disabled = false;
-        });
+        };
+
+        reader.readAsDataURL(file);
     }
 
     blogImageInput.addEventListener('change', (e) => {
